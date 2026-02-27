@@ -1,1 +1,1005 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Leçons Mathématiques PFEQ</title>
+    
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chargement de React et ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Chargement de Babel pour interpréter le JSX dans le navigateur -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <style>
+        /* Animation simple */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* Custom Checkbox */
+        .custom-checkbox input:checked + div {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+        .custom-checkbox input:checked + div svg {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICÔNES SVG ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {path}
+            </svg>
+        );
+
+        const Icons = {
+            BookOpen: (props) => <Icon {...props} path={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />,
+            Layers: (props) => <Icon {...props} path={<><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>} />,
+            CheckSquare: (props) => <Icon {...props} path={<><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>} />,
+            Sparkles: (props) => <Icon {...props} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M2 7h4"/><path d="M2 3h4"/></>} />, 
+            Code: (props) => <Icon {...props} path={<><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></>} />,
+            Copy: (props) => <Icon {...props} path={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></>} />,
+            ChevronRight: (props) => <Icon {...props} path={<polyline points="9 18 15 12 9 6"/>} />,
+            ChevronDown: (props) => <Icon {...props} path={<polyline points="6 9 12 15 18 9"/>} />,
+            GraduationCap: (props) => <Icon {...props} path={<><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></>} />,
+            Layout: (props) => <Icon {...props} path={<><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="9" y2="21"/></>} />,
+            Palette: (props) => <Icon {...props} path={<><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></>} />,
+            Trash2: (props) => <Icon {...props} path={<><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>} />,
+            Plus: (props) => <Icon {...props} path={<><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></>} />,
+            RotateCcw: (props) => <Icon {...props} path={<><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></>} />,
+            Check: (props) => <Icon {...props} path={<polyline points="20 6 9 17 4 12"/>} />
+        };
+
+        // --- BASE DE DONNÉES PÉDAGOGIQUES (Pour la Notion Principale) ---
+        const PFEQ_DATA = {
+            cycle1: {
+                label: "1er Cycle (1re et 2e année)",
+                domains: {
+                    arithmetique: { label: "A. Arithmétique", concepts: ["Compter par ordre croissant", "Compter par ordre décroissant (comptine à rebours)", "Compter par bonds (2, 5, 10, etc.)", "Dénombrer une collection", "Lire les nombres naturels", "Écrire les nombres naturels en chiffres", "Représenter les nombres (matériel, dessins)", "Composer un nombre", "Décomposer un nombre", "Comparer des nombres (plus petit, plus grand, égal)", "Ordonner des nombres par ordre croissant/décroissant", "Situer des nombres sur une droite numérique", "Fractions (Initiation)", "Addition et soustraction (sens et calcul)", "Calcul mental (addition et soustraction)", "Calcul écrit (addition et soustraction)"] },
+                    geometrie: { label: "B. Géométrie", concepts: ["Repérage dans l’espace", "Solides", "Figures planes", "Observer des régularités"] },
+                    mesure: { label: "C. Mesure", concepts: ["Longueur", "Temps"] },
+                    statistique: { label: "D. Statistique et Probabilité", concepts: ["Statistique", "Probabilité"] }
+                }
+            },
+            cycle2: {
+                label: "2e Cycle (3e et 4e année)",
+                domains: {
+                    arithmetique: { label: "A. Arithmétique", concepts: ["Nombres 0-100k : Lire, Écrire, Représenter", "Nombres 0-100k : Comparer et Ordonner", "Composer et décomposer", "Arrondir un nombre (approximation/estimation)", "Identifier les nombres pairs et impairs", "Reconnaître des expressions équivalentes", "Nombres décimaux : Lire, écrire, représenter", "Nombres décimaux : Comparer et ordonner", "Fractions : Sens, Lire, Écrire", "Fractions : Ordonner et équivalences", "Addition et soustraction (maîtrise écrite)", "Multiplication et division", "Propriétés (Commutativité/Associativité)"] },
+                    geometrie: { label: "B. Géométrie", concepts: ["Droites parallèles, perpendiculaires, sécantes", "Identifier un axe de symétrie", "Quadrilatères", "Triangles", "Solides : Décrire et associer au développement"] },
+                    mesure: { label: "C. Mesure", concepts: ["Longueur : Comparer et mesurer", "Surface (aire) : Mesurer et calculer", "Volume : Estimer", "Temps : Calculer et lire", "Angles : Comparer des ouvertures"] },
+                    statistique: { label: "D. Statistique et Probabilité", concepts: ["Statistique : Interpréter et construire", "Probabilité : Dénombrer et comparer"] }
+                }
+            },
+            cycle3: {
+                label: "3e Cycle (5e et 6e année)",
+                domains: {
+                    arithmetique: { label: "A. Arithmétique", concepts: ["Nombres naturels (millions) : Lire, écrire, comparer, ordonner", "Arrondir (approximation)", "Identifier nombres premiers, composés, carrés", "Décomposer en facteurs premiers", "Nombres entiers (positifs et négatifs)", "Nombres décimaux (jusqu'aux millièmes)", "Fractions et pourcentages : Passer d'une forme à l'autre", "Multiplication et division de décimaux", "Addition et soustraction de fractions"] },
+                    geometrie: { label: "B. Géométrie", concepts: ["Plan cartésien : Se repérer", "Cercle", "Polygones réguliers", "Transformations géométriques", "Solides : Relation d'Euler"] },
+                    mesure: { label: "C. Mesure", concepts: ["Aire et périmètre : Calculer", "Volume : Prisme rectangulaire", "Angles : Mesurer et construire", "Capacité et masse", "Température"] },
+                    statistique: { label: "D. Statistique et Probabilité", concepts: ["Statistique : Moyenne et diagrammes", "Probabilité : Dénombrer et calculer"] }
+                }
+            }
+        };
+
+        // --- LISTE COMPLÈTE DES CONCEPTS SUPPLÉMENTAIRES ---
+        const GLOBAL_CONCEPTS = [
+            {
+                category: "A. ARITHMÉTIQUE (Nombres et Opérations)",
+                subcategories: [
+                    {
+                        name: "1. Nombres naturels",
+                        items: [
+                            "Compter ou réciter la comptine des nombres par ordre croissant (1er cycle)",
+                            "Compter ou réciter la comptine par ordre décroissant (1er cycle)",
+                            "Compter par bonds (1er et 2e cycles)",
+                            "Dénombrer des collections réelles ou dessinées (1er cycle)",
+                            "Lire et écrire tout nombre naturel (1er, 2e et 3e cycles)",
+                            "Représenter des nombres naturels : accent mis sur le groupement (1er cycle)",
+                            "Représenter des nombres naturels : accent mis sur l’échange (base 10) (1er et 2e cycles)",
+                            "Représenter des nombres naturels : accent mis sur la valeur de position (1er et 2e cycles)",
+                            "Représenter la puissance d’un nombre naturel (3e cycle)",
+                            "Composer et décomposer un nombre naturel (1er et 2e cycles)",
+                            "Reconnaître des expressions équivalentes (ex: 52 = 40 + 12) (1er cycle)",
+                            "Comparer entre eux des nombres naturels (1er, 2e et 3e cycles)",
+                            "Ordonner des nombres naturels (1er, 2e et 3e cycles)",
+                            "Décrire des régularités numériques (ex: pairs/impairs, divisibilité) (1er, 2e et 3e cycles)",
+                            "Situer des nombres naturels sur un axe (droite numérique) (1er, 2e et 3e cycles)",
+                            "Identifier les propriétés des nombres naturels (pair, impair, premier, composé) (1er, 2e et 3e cycles)",
+                            "Classifier des nombres naturels de diverses façons (2e cycle)",
+                            "Faire une approximation d’une collection (estimer) (1er, 2e et 3e cycles)"
+                        ]
+                    },
+                    {
+                        name: "2. Fractions",
+                        items: [
+                            "Reconnaître des fractions provenant de la vie courante (2e cycle)",
+                            "Représenter une fraction de différentes façons (partie d'un tout/collection) (2e et 3e cycles)",
+                            "Associer une fraction à une partie d’un tout ou d'une collection (2e cycle)",
+                            "Reconnaître les différents sens de la fraction (partage, division, rapport) (2e et 3e cycles)",
+                            "Distinguer le rôle du numérateur et du dénominateur (2e et 3e cycles)",
+                            "Lire et écrire une fraction (2e et 3e cycles)",
+                            "Comparer une fraction à 0, à 1/2 ou à 1 (2e cycle)",
+                            "Vérifier l’équivalence de deux fractions (2e et 3e cycles)",
+                            "Associer un nombre décimal ou un pourcentage à une fraction (3e cycle)",
+                            "Ordonner des fractions (dénominateurs identiques ou multiples) (2e et 3e cycles)",
+                            "Situer des fractions sur un axe (2e et 3e cycles)",
+                            "Reconnaître des fractions irréductibles (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "3. Nombres décimaux",
+                        items: [
+                            "Représenter des nombres décimaux (matériel concret ou dessins) (2e et 3e cycles)",
+                            "Reconnaître des représentations équivalentes de nombres décimaux (2e et 3e cycles)",
+                            "Lire et écrire des nombres écrits en notation décimale (2e et 3e cycles)",
+                            "Reconnaître le rôle de la virgule et la valeur de position (2e et 3e cycles)",
+                            "Composer et décomposer un nombre décimal (2e et 3e cycles)",
+                            "Reconnaître des expressions numériques équivalentes (2e et 3e cycles)",
+                            "Situer des nombres décimaux sur un axe (2e et 3e cycles)",
+                            "Comparer entre eux des nombres décimaux (2e et 3e cycles)",
+                            "Faire une approximation (arrondir, tronquer) (3e cycle)",
+                            "Ordonner des nombres décimaux (2e et 3e cycles)",
+                            "Associer une fraction ou un pourcentage à un nombre décimal (2e et 3e cycles)"
+                        ]
+                    },
+                    {
+                        name: "4. Nombres entiers (Relatifs)",
+                        items: [
+                            "Représenter des nombres entiers (3e cycle)",
+                            "Lire et écrire des nombres entiers (3e cycle)",
+                            "Situer des nombres entiers sur un axe (3e cycle)",
+                            "Comparer et ordonner des nombres entiers (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "5. Opérations (Sens et Calcul)",
+                        items: [
+                            "Reconnaître l’opération (addition, soustraction, mult., div.) à effectuer (1er, 2e et 3e cycles)",
+                            "Traduire une situation d'addition ou de soustraction (ajout, retrait, réunion, comparaison) (1er cycle)",
+                            "Traduire une situation par une composition de transformations (ex: j'ai gagné 2, puis perdu 3) (2e et 3e cycles)",
+                            "Traduire une situation de multiplication ou division (disposition rectangulaire, partage) (2e et 3e cycles)",
+                            "Établir la relation d’égalité entre des expressions numériques (1er, 2e et 3e cycles)",
+                            "Déterminer des équivalences numériques (commutativité, associativité) (1er, 2e et 3e cycles)",
+                            "Déterminer des équivalences (distributivité) (3e cycle)",
+                            "Traduire une situation par une suite d’opérations (chaînes d'opérations) (2e et 3e cycles)",
+                            "Calcul mental / Faits numériques : Tables d'addition (0+0 à 10+10) et soustractions correspondantes (1er cycle)",
+                            "Calcul mental / Faits numériques : Tables de multiplication (0x0 à 10x10) et divisions correspondantes (2e et 3e cycles)",
+                            "Calcul écrit : Addition et soustraction de nombres naturels (1er et 2e cycles)",
+                            "Calcul écrit : Multiplication et division de nombres naturels (2e et 3e cycles)",
+                            "Calcul écrit : Addition et soustraction de nombres décimaux (2e et 3e cycles)",
+                            "Calcul écrit : Multiplication et division de nombres décimaux (3e cycle)"
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "B. GÉOMÉTRIE",
+                subcategories: [
+                    {
+                        name: "1. Espace",
+                        items: [
+                            "Se repérer et repérer des objets dans l’espace (relations spatiales) (1er cycle)",
+                            "Effectuer des activités de repérage sur un plan, une carte ou une grille (1er et 2e cycles)",
+                            "Se repérer dans le plan cartésien (1er quadrant) (2e cycle)",
+                            "Se repérer dans le plan cartésien (4 quadrants) (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "2. Solides",
+                        items: [
+                            "Comparer des objets de l'environnement à des solides (1er cycle)",
+                            "Identifier des solides (boule, cube, cylindre, cône, prisme, pyramide) (1er cycle)",
+                            "Décrire des solides (faces, sommets, arêtes) (2e cycle)",
+                            "Comparer et construire des solides (1er et 2e cycles)",
+                            "Identifier le développement de solides (prisme et pyramide) (2e et 3e cycles)",
+                            "Associer un solide à son développement (et vice-versa) (2e et 3e cycles)",
+                            "Tester la relation d'Euler (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "3. Figures planes",
+                        items: [
+                            "Identifier des figures planes (carré, rectangle, triangle, cercle, losange) (1er cycle)",
+                            "Décrire des figures planes (côtés, sommets, angles) (2e cycle)",
+                            "Classifier les polygones (convexes, non convexes) (2e cycle)",
+                            "Classifier les quadrilatères (trapèze, parallélogramme, rectangle, losange, carré) (2e et 3e cycles)",
+                            "Classifier les triangles (scalène, isocèle, équilatéral, rectangle) (3e cycle)",
+                            "Décrire le cercle (rayon, diamètre, circonférence, angle au centre) (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "4. Frises et dallages",
+                        items: [
+                            "Identifier des régularités dans une frise ou un dallage (1er cycle)",
+                            "Poursuivre une frise ou un dallage (1er cycle)",
+                            "Produire des frises et des dallages (réflexion) (2e cycle)",
+                            "Produire des frises et des dallages (translation, rotation) (3e cycle)"
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "C. MESURE",
+                subcategories: [
+                    {
+                        name: "1. Longueurs",
+                        items: [
+                            "Estimer et mesurer avec des unités non conventionnelles (1er cycle)",
+                            "Estimer et mesurer avec des unités conventionnelles (m, dm, cm, mm, km) (1er, 2e et 3e cycles)",
+                            "Établir des relations entre les unités de mesure de longueur (2e et 3e cycles)",
+                            "Calculer le périmètre de figures planes (2e et 3e cycles)"
+                        ]
+                    },
+                    {
+                        name: "2. Surfaces (Aire)",
+                        items: [
+                            "Estimer et mesurer la surface avec des unités non conventionnelles (2e cycle)",
+                            "Estimer et mesurer la surface avec des unités conventionnelles (m², dm², cm²) (2e et 3e cycles)",
+                            "Calculer l’aire de rectangles, carrés, triangles (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "3. Volumes",
+                        items: [
+                            "Estimer et mesurer le volume avec des unités non conventionnelles (2e cycle)",
+                            "Estimer et mesurer le volume avec des unités conventionnelles (m³, dm³, cm³) (3e cycle)",
+                            "Calculer le volume de prismes droits (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "4. Angles",
+                        items: [
+                            "Comparer des angles (droit, aigu, obtus) (2e cycle)",
+                            "Estimer et mesurer des angles en degrés (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "5. Capacités et Masses",
+                        items: [
+                            "Estimer et mesurer la capacité (L, mL) (2e et 3e cycles)",
+                            "Estimer et mesurer la masse (kg, g) (2e et 3e cycles)",
+                            "Établir des relations entre les unités de mesure (2e et 3e cycles)"
+                        ]
+                    },
+                    {
+                        name: "6. Temps et Température",
+                        items: [
+                            "Estimer et mesurer le temps (unités conventionnelles) (1er, 2e et 3e cycles)",
+                            "Établir des relations entre les unités de temps (2e et 3e cycles)",
+                            "Estimer et mesurer la température (°C) (1er, 2e et 3e cycles)"
+                        ]
+                    }
+                ]
+            },
+            {
+                category: "D. STATISTIQUE ET PROBABILITÉ",
+                subcategories: [
+                    {
+                        name: "1. Statistique",
+                        items: [
+                            "Formuler des questions d’enquête (1er, 2e et 3e cycles)",
+                            "Collecter, décrire et organiser des données (1er, 2e et 3e cycles)",
+                            "Interpréter des données à l'aide d'un tableau, pictogramme ou diagramme à bandes (1er et 2e cycles)",
+                            "Interpréter des données à l'aide d'un diagramme à ligne brisée (2e et 3e cycles)",
+                            "Interpréter des données à l'aide d'un diagramme circulaire (3e cycle)",
+                            "Calculer et interpréter la moyenne arithmétique (3e cycle)"
+                        ]
+                    },
+                    {
+                        name: "2. Probabilité",
+                        items: [
+                            "Expérimenter des activités liées au hasard (prédictions qualitatives) (1er cycle)",
+                            "Dénombrer les résultats possibles d’une expérience aléatoire (2e et 3e cycles)",
+                            "Calculer la probabilité d’un événement (prédictions quantitatives) (3e cycle)",
+                            "Comparer des résultats théoriques et expérimentaux (3e cycle)"
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        const OBJECTIVES_DB = {
+            "Compter par ordre croissant": { cycle1: ["Compter à voix haute de 1 jusqu’à 1 000 sans erreurs."] },
+            "Addition et soustraction (sens et calcul)": { cycle1: ["Résoudre des problèmes d’addition et de soustraction avec matériel concret."] },
+            // Extension de la base possible ici
+        };
+
+        const STYLES = [
+            "Ludique & Coloré (Gamification)",
+            "Formel & Structuré",
+            "Aventure Narrative",
+            "Défis Progressifs",
+            "Exploration Guidée"
+        ];
+
+        const TAB_TYPES = [
+            "Explication / Théorie",
+            "Exercices (QCM)",
+            "Exercices (Réponse courte)",
+            "Manipulation Interactive (Glisser-déposer)",
+            "Activités interactives et dynamiques",
+            "Défis de logique",
+            "Démonstration Visuelle",
+            "Synthèse"
+        ];
+
+        // --- COMPOSANT PRINCIPAL ---
+        function GeneratorApp() {
+            const [step, setStep] = useState(1);
+            const [generatedPrompt, setGeneratedPrompt] = useState("");
+            
+            // État du formulaire
+            const [title, setTitle] = useState("");
+            const [selectedTopic, setSelectedTopic] = useState("");
+            const [objective, setObjective] = useState("");
+            const [addedObjectives, setAddedObjectives] = useState([]); 
+            const [cycle, setCycle] = useState("cycle1");
+            const [selectedConcepts, setSelectedConcepts] = useState([]);
+            
+            // Structure des onglets avec TYPES MULTIPLES
+            const [tabs, setTabs] = useState([
+                { id: 1, name: "Introduction", types: ["Explication / Théorie"], content: "Présentation du concept avec exemples visuels." },
+                { id: 2, name: "Pratique", types: ["Exercices (QCM)"], content: "Série de 5 questions pour valider la compréhension." }
+            ]);
+            const [style, setStyle] = useState(STYLES[0]);
+            const [adaptation, setAdaptation] = useState(false);
+            
+            const [openDropdownId, setOpenDropdownId] = useState(null);
+
+            // Reset complet
+            const resetApp = () => {
+                setTitle("");
+                setObjective("");
+                setCycle("cycle1");
+                setSelectedTopic("");
+                setSelectedConcepts([]);
+                setAddedObjectives([]);
+                setTabs([
+                    { id: 1, name: "Introduction", types: ["Explication / Théorie"], content: "Présentation du concept avec exemples visuels." },
+                    { id: 2, name: "Pratique", types: ["Exercices (QCM)"], content: "Série de 5 questions pour valider la compréhension." }
+                ]);
+                setStyle(STYLES[0]);
+                setAdaptation(false);
+                setStep(1);
+                setGeneratedPrompt("");
+            };
+
+            // Suggestions
+            const getObjectiveSuggestions = () => {
+                if (!selectedTopic) return [];
+                let suggestions = [];
+                if (OBJECTIVES_DB[selectedTopic] && OBJECTIVES_DB[selectedTopic][cycle]) {
+                    suggestions = [...OBJECTIVES_DB[selectedTopic][cycle]];
+                } else {
+                    let keyFound = Object.keys(OBJECTIVES_DB).find(key => selectedTopic.includes(key));
+                    if (keyFound && OBJECTIVES_DB[keyFound][cycle]) {
+                        suggestions = [...OBJECTIVES_DB[keyFound][cycle]];
+                    }
+                }
+                if (suggestions.length > 0) suggestions.push("Présenter la technique pour...");
+                return suggestions;
+            };
+
+            const addSuggestionToObjective = (suggestion) => {
+                if (!objective.includes(suggestion)) {
+                    setObjective(prev => prev ? prev + "\n- " + suggestion : "- " + suggestion);
+                }
+                setAddedObjectives(prev => [...prev, suggestion]);
+            };
+
+            // Toggle des concepts mathématiques
+            const toggleConcept = (concept) => {
+                setSelectedConcepts(prev => 
+                    prev.includes(concept) 
+                        ? prev.filter(c => c !== concept) 
+                        : [...prev, concept]
+                );
+            };
+
+            // Gestion des onglets
+            const addTab = () => {
+                const newId = tabs.length > 0 ? Math.max(...tabs.map(t => t.id)) + 1 : 1;
+                setTabs([...tabs, { id: newId, name: `Onglet ${tabs.length + 1}`, types: [TAB_TYPES[0]], content: "" }]);
+            };
+
+            const removeTab = (id) => {
+                setTabs(tabs.filter(t => t.id !== id));
+            };
+
+            const updateTabName = (id, name) => {
+                setTabs(tabs.map(t => t.id === id ? { ...t, name } : t));
+            };
+
+            const updateTabContent = (id, content) => {
+                setTabs(tabs.map(t => t.id === id ? { ...t, content } : t));
+            };
+
+            const toggleTabType = (id, type) => {
+                setTabs(tabs.map(t => {
+                    if (t.id === id) {
+                        const currentTypes = t.types || [];
+                        const newTypes = currentTypes.includes(type)
+                            ? currentTypes.filter(curr => curr !== type)
+                            : [...currentTypes, type];
+                        return { ...t, types: newTypes };
+                    }
+                    return t;
+                }));
+            };
+
+            // Génération du Prompt
+            const generateFinalPrompt = () => {
+                const conceptList = selectedConcepts.length > 0 
+                    ? selectedConcepts.map(c => `- ${c}`).join("\n")
+                    : "Aucun concept spécifique supplémentaire sélectionné.";
+
+                const tabList = tabs.map((t, index) => 
+                    `   * Onglet ${index + 1}: "${t.name}"
+         - Types d'activités: ${(t.types && t.types.length > 0) ? t.types.join(", ") : "Non spécifié"}
+         - Contenu attendu: ${t.content}`
+                ).join("\n");
+
+                const promptText = `
+RÔLE : Tu es un développeur web expert spécialisé en pédagogie numérique pour le primaire (Québec).
+
+TÂCHE : Crée une leçon mathématique interactive sous forme d'une SINGLE-PAGE APPLICATION (Fichier unique HTML contenant CSS et JS). L'application doit être utilisable sur un Tableau Interactif (TNI) ou une tablette.
+
+--- INFORMATIONS GÉNÉRALES ---
+TITRE : ${title || "Leçon Mathématique"}
+NIVEAU : ${PFEQ_DATA[cycle].label}
+NOTION PRINCIPALE : ${selectedTopic || "Non définie"}
+OBJECTIF PÉDAGOGIQUE : 
+${objective || "Non défini"}
+STYLE PÉDAGOGIQUE : ${style}
+ADAPTATION ÉLÈVES EN DIFFICULTÉ : ${adaptation ? "OUI (Prévoir des indices visuels supplémentaires et une progression plus douce)" : "Standard"}
+
+--- CONCEPTS MATHÉMATIQUES (PFEQ) ---
+${conceptList}
+
+--- STRUCTURE DE L'APPLICATION ---
+L'application doit comporter un menu de navigation par onglets. Voici les onglets requis :
+${tabList}
+
+--- EXIGENCES TECHNIQUES & FONCTIONNELLES ---
+1. INTERFACE : 
+   - Utiliser Tailwind CSS (via CDN) pour le style.
+   - Design "Responsive" adapté au tactile (gros boutons, zones de texte larges).
+   - Esthétique : ${style}.
+   - Navigation fluide entre les onglets sans rechargement.
+
+2. INTERACTIVITÉ :
+   - Pour chaque exercice, fournir un FEEDBACK IMMÉDIAT.
+   - Vert ✅ pour une bonne réponse (avec petit message d'encouragement).
+   - Rouge ❌ pour une erreur (avec un indice ou possibilité de recommencer).
+   - Inclure un bouton "Recommencer" pour réinitialiser les activités.
+   - Si pertinent, utiliser <canvas> ou SVG pour dessiner les formes géométriques ou fractions dynamiquement.
+
+3. CONTENU SPÉCIFIQUE :
+   - Générer des exemples pertinents et des nombres aléatoires si possible pour que l'exercice soit rejouable.
+   - Assurer que le vocabulaire est adapté au cycle scolaire choisi.
+
+4. FORMAT DE SORTIE :
+   - UN SEUL bloc de code contenant HTML, CSS (<style>) et JS (<script>).
+   - Le code doit être robuste, sans erreur et prêt à l'emploi.
+   - Utiliser React via Babel/CDN pour structurer l'interface facilement dans ce seul fichier.
+                `;
+                setGeneratedPrompt(promptText.trim());
+            };
+
+            useEffect(() => {
+                generateFinalPrompt();
+            }, [title, selectedTopic, objective, cycle, selectedConcepts, tabs, style, adaptation]);
+
+            const copyToClipboard = () => {
+                const textToCopy = generatedPrompt;
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(textToCopy)
+                        .then(() => alert("Prompt copié avec succès !"))
+                        .catch(() => fallbackCopy(textToCopy));
+                } else {
+                    fallbackCopy(textToCopy);
+                }
+            };
+
+            const fallbackCopy = (text) => {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    const successful = document.execCommand('copy');
+                    if (successful) alert("Prompt copié !");
+                    else alert("Impossible de copier automatiquement.");
+                } catch (err) {
+                    alert("Erreur lors de la copie.");
+                }
+                document.body.removeChild(textArea);
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 p-2 md:p-6 lg:p-8">
+                    <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 flex flex-col min-h-[85vh]">
+                        
+                        {/* Header */}
+                        <div className="bg-blue-600 p-5 md:p-6 text-white flex items-center justify-between shrink-0">
+                            <div>
+                                <h1 className="text-xl md:text-3xl font-bold flex items-center gap-3">
+                                    <Icons.GraduationCap size={32} />
+                                    Générateur PFEQ Interactif
+                                </h1>
+                                <p className="text-blue-100 mt-1 text-sm md:text-base">Construisez le prompt parfait pour vos leçons au TNI.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+                            
+                            {/* Sidebar Navigation */}
+                            <div className="w-full md:w-64 bg-slate-100 border-r border-slate-200 p-4 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0 scrollbar-hide">
+                                {[
+                                    { id: 1, label: "Concepts & PFEQ", icon: Icons.Layers },
+                                    { id: 2, label: "Informations", icon: Icons.BookOpen },
+                                    { id: 3, label: "Structure", icon: Icons.Layout },
+                                    { id: 4, label: "Style", icon: Icons.Palette },
+                                    { id: 5, label: "Résultat Prompt", icon: Icons.Code },
+                                ].map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setStep(s.id)}
+                                        className={`flex-shrink-0 flex items-center gap-2 md:gap-3 p-3 rounded-xl text-left transition-all text-sm md:text-base font-medium ${
+                                            step === s.id 
+                                                ? "bg-blue-600 text-white shadow-md transform scale-[1.02]" 
+                                                : "hover:bg-slate-200 text-slate-600"
+                                        }`}
+                                    >
+                                        <s.icon size={20} />
+                                        <span className="whitespace-nowrap">{s.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Main Content Area */}
+                            <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+                                
+                                {/* STEP 1: CONCEPTS */}
+                                {step === 1 && (
+                                    <div className="space-y-8 animate-fadeIn max-w-4xl">
+                                        <div>
+                                            <h2 className="text-2xl font-bold text-slate-800 border-b pb-2 mb-6">1. Niveau Scolaire & Concepts</h2>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                                    <label className="block text-sm font-bold text-slate-700 mb-2">Cycle Scolaire</label>
+                                                    <select 
+                                                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 transition-colors cursor-pointer"
+                                                        value={cycle}
+                                                        onChange={(e) => {
+                                                            setCycle(e.target.value);
+                                                            setSelectedTopic(""); 
+                                                            setAddedObjectives([]); 
+                                                        }}
+                                                    >
+                                                        {Object.entries(PFEQ_DATA).map(([key, data]) => (
+                                                            <option key={key} value={key}>{data.label}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+
+                                                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                                                    <label className="block text-sm font-bold text-slate-700 mb-2">Thème Principal</label>
+                                                    <select 
+                                                        className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-slate-50 transition-colors cursor-pointer"
+                                                        value={selectedTopic}
+                                                        onChange={(e) => {
+                                                            setSelectedTopic(e.target.value);
+                                                            setAddedObjectives([]); 
+                                                        }}
+                                                    >
+                                                        <option value="">-- Sélectionnez une notion --</option>
+                                                        {Object.entries(PFEQ_DATA[cycle].domains).map(([key, domain]) => (
+                                                            <optgroup key={key} label={domain.label}>
+                                                                {domain.concepts.map((concept, idx) => (
+                                                                    <option key={idx} value={concept}>{concept}</option>
+                                                                ))}
+                                                            </optgroup>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-slate-800">Concepts du PFEQ Détaillés</h3>
+                                                    <p className="text-sm text-slate-500">Cochez les éléments spécifiques que la leçon doit cibler.</p>
+                                                </div>
+                                                <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full">
+                                                    {selectedConcepts.length} sélectionné(s)
+                                                </span>
+                                            </div>
+                                            
+                                            {/* LISTE COMPLÈTE DES CONCEPTS */}
+                                            <div className="grid grid-cols-1 gap-6">
+                                                {GLOBAL_CONCEPTS.map((domain, dIdx) => (
+                                                    <div key={dIdx} className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm">
+                                                        <div className="bg-slate-100 p-3 font-bold text-slate-800 uppercase tracking-wide text-sm border-b flex items-center gap-2">
+                                                            <Icons.CheckSquare size={16} className="text-blue-600" />
+                                                            {domain.category}
+                                                        </div>
+                                                        <div className="p-4 grid gap-6">
+                                                            {domain.subcategories.map((sub, sIdx) => (
+                                                                <div key={sIdx} className="border-l-4 border-blue-200 pl-4 py-1">
+                                                                    <h4 className="font-bold text-slate-700 mb-3">{sub.name}</h4>
+                                                                    <div className="grid grid-cols-1 gap-2">
+                                                                        {sub.items.map((concept, cIdx) => (
+                                                                            <label key={cIdx} className="custom-checkbox flex items-start gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer transition-colors group">
+                                                                                <input 
+                                                                                    type="checkbox" 
+                                                                                    className="hidden" 
+                                                                                    checked={selectedConcepts.includes(concept)}
+                                                                                    onChange={() => toggleConcept(concept)}
+                                                                                />
+                                                                                <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                                                                    selectedConcepts.includes(concept) 
+                                                                                        ? "bg-blue-600 border-blue-600" 
+                                                                                        : "border-slate-300 bg-white group-hover:border-blue-400"
+                                                                                }`}>
+                                                                                    <Icons.Check size={14} className="text-white hidden" />
+                                                                                </div>
+                                                                                <span className={`text-sm leading-snug flex-1 ${selectedConcepts.includes(concept) ? "font-semibold text-slate-900" : "text-slate-600"}`}>
+                                                                                    {concept}
+                                                                                </span>
+                                                                            </label>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex justify-end pt-4 border-t border-slate-200">
+                                            <button onClick={() => setStep(2)} className="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 flex items-center gap-2 font-bold shadow-lg hover:shadow-xl transition-all">
+                                                Suivant : Informations <Icons.ChevronRight size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 2: INFOS */}
+                                {step === 2 && (
+                                    <div className="space-y-6 animate-fadeIn max-w-3xl">
+                                        <h2 className="text-2xl font-bold text-slate-800 border-b pb-2">2. Informations de la leçon</h2>
+                                        
+                                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">Titre de l'application/leçon</label>
+                                            <input 
+                                                type="text" 
+                                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg bg-slate-50"
+                                                placeholder="Ex: Les fractions dans ma cuisine"
+                                                value={title}
+                                                onChange={(e) => setTitle(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="bg-blue-50 p-5 rounded-xl border border-blue-200 shadow-inner">
+                                            <label className="block text-sm font-bold text-blue-900 mb-3">
+                                                <span className="flex items-center gap-2">
+                                                    <Icons.Sparkles className="text-blue-600" size={18} /> 
+                                                    Suggestions d'objectifs (basées sur : {selectedTopic || "..."})
+                                                </span>
+                                            </label>
+
+                                            {selectedTopic ? (
+                                                <div className="animate-fadeIn">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {getObjectiveSuggestions().length > 0 ? (
+                                                            getObjectiveSuggestions().map((sugg, idx) => {
+                                                                const isAdded = addedObjectives.includes(sugg);
+                                                                return (
+                                                                    <button
+                                                                        key={idx}
+                                                                        onClick={() => addSuggestionToObjective(sugg)}
+                                                                        className={`text-left text-sm px-4 py-2 rounded-lg font-medium transition-all border ${
+                                                                            isAdded 
+                                                                                ? "bg-blue-700 text-white border-blue-800 shadow-md transform scale-105" 
+                                                                                : "bg-white text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm"
+                                                                        }`}
+                                                                    >
+                                                                        {isAdded ? "✓ Ajouté" : "+ "}{sugg}
+                                                                    </button>
+                                                                );
+                                                            })
+                                                        ) : (
+                                                            <p className="text-sm text-slate-500 italic bg-white p-3 rounded-lg border border-slate-200">Aucune suggestion prédéfinie pour ce choix. Saisissez votre objectif ci-dessous.</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-sm text-amber-600 font-medium italic bg-amber-50 p-3 rounded-lg border border-amber-200">Veuillez sélectionner un thème principal à l'étape 1 pour voir les suggestions.</p>
+                                            )}
+                                        </div>
+
+                                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                            <label className="block text-sm font-bold text-slate-700 mb-2">Objectif Pédagogique (Texte à envoyer à l'IA)</label>
+                                            <textarea 
+                                                className="w-full p-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none h-40 bg-slate-50 font-medium"
+                                                placeholder="Que doivent accomplir ou comprendre les élèves à la fin de cette leçon ?"
+                                                value={objective}
+                                                onChange={(e) => setObjective(e.target.value)}
+                                            />
+                                        </div>
+                                        
+                                        <div className="flex justify-between pt-4 border-t border-slate-200">
+                                            <button onClick={() => setStep(1)} className="text-slate-500 hover:bg-slate-100 font-medium px-6 py-2 rounded-lg transition-colors">Retour</button>
+                                            <button onClick={() => setStep(3)} className="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 flex items-center gap-2 font-bold shadow-md hover:shadow-lg transition-all">
+                                                Suivant : Structure <Icons.ChevronRight size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 3: STRUCTURE & ONGLETS */}
+                                {step === 3 && (
+                                    <div className="space-y-6 animate-fadeIn max-w-4xl">
+                                        <h2 className="text-2xl font-bold text-slate-800 border-b pb-2">3. Structure de l'application</h2>
+                                        <p className="text-slate-600 bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm">Organisez le déroulement de votre leçon en onglets. L'IA créera un menu interactif basé sur cette structure.</p>
+
+                                        <div className="space-y-5">
+                                            {tabs.map((tab, index) => (
+                                                <div key={tab.id} className="bg-white border-2 border-slate-200 rounded-xl p-5 shadow-sm relative group hover:border-blue-300 transition-colors">
+                                                    <div className="absolute -top-3 -left-3 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-md">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="absolute top-3 right-3 z-20">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => removeTab(tab.id)} 
+                                                            className="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition-colors" 
+                                                            title="Supprimer l'onglet"
+                                                        >
+                                                            <Icons.Trash2 size={18} />
+                                                        </button>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 pl-4 pt-2">
+                                                        <div>
+                                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Titre de l'onglet</label>
+                                                            <input 
+                                                                type="text" 
+                                                                value={tab.name}
+                                                                onChange={(e) => updateTabName(tab.id, e.target.value)}
+                                                                className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-slate-800 font-bold"
+                                                            />
+                                                        </div>
+                                                        <div className="relative">
+                                                            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Types d'activités (Multi-choix)</label>
+                                                            <button 
+                                                                onClick={() => setOpenDropdownId(openDropdownId === tab.id ? null : tab.id)}
+                                                                className="w-full text-left bg-slate-50 border border-slate-300 rounded-lg p-2 text-slate-700 flex justify-between items-center focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                            >
+                                                                <span className="truncate font-medium text-sm">
+                                                                    {tab.types && tab.types.length > 0 ? tab.types.join(", ") : "Sélectionner..."}
+                                                                </span>
+                                                                <Icons.ChevronDown size={16} className="text-slate-500" />
+                                                            </button>
+                                                            
+                                                            {/* Menu déroulant CUSTOM */}
+                                                            {openDropdownId === tab.id && (
+                                                                <div className="absolute z-30 top-full left-0 w-full bg-white shadow-xl rounded-xl border border-slate-200 mt-2 max-h-56 overflow-y-auto p-2">
+                                                                    {TAB_TYPES.map(t => (
+                                                                        <label key={t} className="flex items-center gap-3 p-2.5 hover:bg-blue-50 rounded-lg cursor-pointer text-sm font-medium text-slate-700 transition-colors">
+                                                                            <input 
+                                                                                type="checkbox" 
+                                                                                className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                                                                checked={tab.types.includes(t)}
+                                                                                onChange={() => toggleTabType(tab.id, t)}
+                                                                            />
+                                                                            <span>{t}</span>
+                                                                        </label>
+                                                                    ))}
+                                                                    <div className="sticky bottom-0 bg-white pt-2 border-t mt-1">
+                                                                        <button 
+                                                                            onClick={() => setOpenDropdownId(null)}
+                                                                            className="w-full bg-slate-100 text-slate-700 font-bold py-2 rounded-lg hover:bg-slate-200 transition-colors"
+                                                                        >
+                                                                            Terminer
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {openDropdownId === tab.id && (
+                                                                <div className="fixed inset-0 z-20" onClick={() => setOpenDropdownId(null)}></div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="pl-4">
+                                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Description du contenu attendu</label>
+                                                        <textarea 
+                                                            value={tab.content}
+                                                            onChange={(e) => updateTabContent(tab.id, e.target.value)}
+                                                            className="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-y"
+                                                            rows="3"
+                                                            placeholder="Que doit contenir précisément cet onglet ? (ex: 3 problèmes écrits impliquant de la monnaie...)"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <button 
+                                                onClick={addTab}
+                                                className="w-full py-4 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 bg-white transition-all flex items-center justify-center gap-2 font-bold text-lg"
+                                            >
+                                                <Icons.Plus size={24} /> Ajouter un nouvel onglet
+                                            </button>
+                                        </div>
+
+                                        <div className="flex justify-between pt-6 border-t border-slate-200">
+                                            <button onClick={() => setStep(2)} className="text-slate-500 hover:bg-slate-100 font-medium px-6 py-2 rounded-lg transition-colors">Retour</button>
+                                            <button onClick={() => setStep(4)} className="bg-blue-600 text-white px-8 py-3 rounded-xl hover:bg-blue-700 flex items-center gap-2 font-bold shadow-md hover:shadow-lg transition-all">
+                                                Suivant : Style <Icons.ChevronRight size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 4: STYLE */}
+                                {step === 4 && (
+                                    <div className="space-y-6 animate-fadeIn max-w-3xl">
+                                        <h2 className="text-2xl font-bold text-slate-800 border-b pb-2">4. Apparence et Adaptation</h2>
+
+                                        <div className="grid grid-cols-1 gap-8">
+                                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                                                <label className="block text-sm font-bold text-slate-700 mb-4 uppercase tracking-wider">Style Visuel & Ambiance</label>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {STYLES.map((s) => (
+                                                        <label key={s} className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                                            style === s 
+                                                                ? "border-blue-600 bg-blue-50 shadow-md" 
+                                                                : "border-slate-200 hover:border-blue-300 hover:bg-slate-50"
+                                                        }`}>
+                                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${style === s ? "border-blue-600" : "border-slate-400"}`}>
+                                                                {style === s && <div className="w-2.5 h-2.5 bg-blue-600 rounded-full"></div>}
+                                                            </div>
+                                                            <input 
+                                                                type="radio" 
+                                                                name="style" 
+                                                                className="hidden"
+                                                                checked={style === s}
+                                                                onChange={() => setStyle(s)}
+                                                            />
+                                                            <span className={`font-medium ${style === s ? "text-blue-900 font-bold" : "text-slate-700"}`}>{s}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6 shadow-sm">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                                                        <Icons.Sparkles size={24} />
+                                                    </div>
+                                                    <h3 className="text-lg font-bold text-amber-900">Adaptation Pédagogique</h3>
+                                                </div>
+                                                <p className="text-amber-800 text-sm mb-4">Activez ce mode pour demander à l'IA d'inclure des aides visuelles, de simplifier le vocabulaire et de créer une progression plus douce adaptée aux élèves en difficulté.</p>
+                                                
+                                                <label className="flex items-center gap-4 cursor-pointer bg-white p-4 rounded-lg border border-amber-100 shadow-sm w-fit hover:bg-amber-50 transition-colors">
+                                                    <div className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 ease-in-out ${adaptation ? "bg-amber-500" : "bg-slate-300"}`}>
+                                                        <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${adaptation ? "translate-x-6" : ""}`}></div>
+                                                    </div>
+                                                    <input type="checkbox" className="hidden" checked={adaptation} onChange={() => setAdaptation(!adaptation)} />
+                                                    <span className={`font-bold text-lg ${adaptation ? "text-amber-700" : "text-slate-500"}`}>
+                                                        Mode Élèves en difficulté
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between pt-6 border-t border-slate-200">
+                                            <button onClick={() => setStep(3)} className="text-slate-500 hover:bg-slate-100 font-medium px-6 py-2 rounded-lg transition-colors">Retour</button>
+                                            <button onClick={() => setStep(5)} className="bg-green-600 text-white px-8 py-3 rounded-xl hover:bg-green-700 flex items-center gap-3 font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+                                                Générer le Prompt <Icons.Code size={20} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* STEP 5: RÉSULTAT */}
+                                {step === 5 && (
+                                    <div className="space-y-6 animate-fadeIn h-full flex flex-col">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 gap-4">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                                                    <Icons.Check className="text-green-500" size={28} />
+                                                    Votre Prompt est prêt !
+                                                </h2>
+                                                <p className="text-sm text-slate-500 mt-1">Copiez ce texte et collez-le dans votre assistant IA (Claude, ChatGPT, etc.)</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <button 
+                                                    onClick={copyToClipboard}
+                                                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition-all transform hover:scale-105"
+                                                >
+                                                    <Icons.Copy size={18} /> Copier le texte
+                                                </button>
+                                                <button 
+                                                    onClick={resetApp}
+                                                    className="bg-slate-200 hover:bg-red-500 hover:text-white text-slate-700 px-4 py-2.5 rounded-xl flex items-center gap-2 font-semibold shadow-sm transition-all"
+                                                    title="Tout recommencer à zéro"
+                                                >
+                                                    <Icons.RotateCcw size={18} /> Réinitialiser
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-[#1e1e1e] rounded-xl p-1 flex-1 overflow-hidden flex flex-col min-h-[400px] border shadow-inner relative group">
+                                            <div className="absolute top-0 left-0 w-full h-8 bg-[#2d2d2d] rounded-t-lg flex items-center px-4 gap-2">
+                                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                                <span className="text-[#858585] text-xs font-mono ml-2">prompt_pfeq.txt</span>
+                                            </div>
+                                            <textarea 
+                                                readOnly
+                                                value={generatedPrompt}
+                                                className="w-full h-full mt-8 bg-transparent text-[#d4d4d4] font-mono text-sm p-4 focus:outline-none resize-none scrollbar-hide"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-start pt-2">
+                                            <button onClick={() => setStep(4)} className="text-slate-500 hover:bg-slate-100 font-medium px-6 py-2 rounded-lg transition-colors flex items-center gap-2">
+                                                <Icons.ChevronRight size={18} className="transform rotate-180" /> Modifier les options
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GeneratorApp />);
+    </script>
+</body>
+</html>
